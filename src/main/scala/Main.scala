@@ -5,140 +5,150 @@ object Main {
   private val logger = LoggerFactory.getLogger(getClass)
 
   def main(args: Array[String]): Unit = {
-    logger.info("Application started successfully!")
+    logger.info("User-oriented banking system started successfully!")
     println("Welcome to the Banking System.")
 
     var continue = true
     while (continue) {
       println("\nMenu:")
-      println("1. Create User")
-      println("2. Create Account")
-      println("3. Read User")
-      println("4. Read Account")
-      println("5. Update User")
-      println("6. Update Account")
-      println("7. List All Users")
-      println("8. List All Accounts")
-      println("9. Delete User")
-      println("10. Delete Account")
-      println("11. Exit")
+      println("1. Deposit Money")
+      println("2. Withdraw Money")
+      println("3. Transfer Money")
+      println("4. Check Balance")
+      println("5. Exit")
       print("Choose an option: ")
 
-      // Menu logic remains the same as in the previous code
       StdIn.readLine() match {
-        case "1" => createUser()
-        case "2" => createAccount()
-        case "3" => readUser()
-        case "4" => readAccount()
-        case "5" => updateUser()
-        case "6" => updateAccount()
-        case "7" => listAllUsers()
-        case "8" => listAllAccounts()
-        case "9" => deleteUser()
-        case "10" => deleteAccount()
-        case "11" =>
+        case "1" => depositMoney()
+        case "2" => withdrawMoney()
+        case "3" => transferMoney()
+        case "4" => checkBalance()
+        case "5" =>
           continue = false
           println("Exiting. Goodbye!")
-        case _ => println("Invalid option. Please try again.")
+        case _ =>
+          println("Invalid option. Please try again.")
       }
     }
   }
 
-  // Menu methods
-  private def createUser(): Unit = {
-    print("Enter user name: ")
-    val name = StdIn.readLine()
-    print("Enter user email: ")
-    val email = StdIn.readLine()
-    val newUserId = BankingSystem.createUser(User(None, name, email))
-    println(s"New User created with ID: $newUserId")
-  }
+  // Deposit money into a specific account
+  def depositMoney(): Unit = {
+    print("Enter your account ID: ")
+    val accountId = try { StdIn.readInt() } catch { case _: Exception => -1 }
+    if (accountId == -1) {
+      println("Invalid account ID. Please enter a numeric value.")
+      return
+    }
 
-  def createAccount(): Unit = {
-    print("Enter user ID: ")
-    val userId = StdIn.readInt()
-    print("Enter account name: ")
-    val name = StdIn.readLine()
-    print("Enter initial balance: ")
-    val balanceInput = StdIn.readLine()  // Read input as string
+    print("Enter amount to deposit: ")
+    val amountInput = StdIn.readLine()
     try {
-      val balance = BigDecimal(balanceInput)  // Convert string to BigDecimal
-      val newAccountId = BankingSystem.createAccount(Account(None, userId, name, balance))
-      println(s"New Account created with ID: $newAccountId")
+      val amount = BigDecimal(amountInput)
+      val currentAccount = BankingSystem.readAccount(accountId)
+      currentAccount match {
+        case Some(account) =>
+          val updatedBalance = account.balance + amount
+          BankingSystem.updateAccount(accountId, account.copy(balance = updatedBalance))
+          println(s"Successfully deposited $amount. New balance: $updatedBalance")
+        case None =>
+          println(s"No account found with ID $accountId.")
+      }
     } catch {
-      case e: NumberFormatException => println("Invalid balance. Please enter a valid number.")
+      case _: NumberFormatException =>
+        println("Invalid amount. Please enter a numeric value.")
     }
   }
 
-  private def updateAccount(): Unit = {
-    print("Enter account ID to update: ")
-    val accountId = StdIn.readInt()
-    print("Enter new user ID: ")
-    val userId = StdIn.readInt()
-    print("Enter new account name: ")
-    val name = StdIn.readLine()
-    print("Enter new balance: ")
-    val balanceInput = StdIn.readLine()  // Read input as string
+  // Withdraw money from a specific account
+  def withdrawMoney(): Unit = {
+    print("Enter your account ID: ")
+    val accountId = try { StdIn.readInt() } catch { case _: Exception => -1 }
+    if (accountId == -1) {
+      println("Invalid account ID. Please enter a numeric value.")
+      return
+    }
+
+    print("Enter amount to withdraw: ")
+    val amountInput = StdIn.readLine()
     try {
-      val balance = BigDecimal(balanceInput)  // Convert string to BigDecimal
-      val updatedCount = BankingSystem.updateAccount(accountId, Account(Some(accountId), userId, name, balance))
-      println(s"Updated $updatedCount account(s).")
+      val amount = BigDecimal(amountInput)
+      val currentAccount = BankingSystem.readAccount(accountId)
+      currentAccount match {
+        case Some(account) =>
+          if (account.balance >= amount) {
+            val updatedBalance = account.balance - amount
+            BankingSystem.updateAccount(accountId, account.copy(balance = updatedBalance))
+            println(s"Successfully withdrew $$amount. New balance: $$updatedBalance")
+          } else {
+            println("Insufficient funds.")
+          }
+        case None =>
+          println(s"No account found with ID $accountId.")
+      }
     } catch {
-      case e: NumberFormatException => println("Invalid balance. Please enter a valid number.")
+      case _: NumberFormatException =>
+        println("Invalid amount. Please enter a numeric value.")
     }
   }
 
+  // Transfer money between two accounts
+  def transferMoney(): Unit = {
+    print("Enter your account ID: ")
+    val senderAccountId = try { StdIn.readInt() } catch { case _: Exception => -1 }
+    if (senderAccountId == -1) {
+      println("Invalid account ID. Please enter a numeric value.")
+      return
+    }
 
-  private def readUser(): Unit = {
-    print("Enter user ID to read: ")
-    val userId = StdIn.readInt()
-    BankingSystem.readUser(userId) match {
-      case Some(user) => println(s"User: $user")
-      case None => println(s"No user found with ID $userId")
+    print("Enter recipient account ID: ")
+    val recipientAccountId = try { StdIn.readInt() } catch { case _: Exception => -1 }
+    if (recipientAccountId == -1) {
+      println("Invalid recipient account ID. Please enter a numeric value.")
+      return
+    }
+
+    print("Enter amount to transfer: ")
+    val amountInput = StdIn.readLine()
+    try {
+      val amount = BigDecimal(amountInput)
+      val senderAccountOpt = BankingSystem.readAccount(senderAccountId)
+      val recipientAccountOpt = BankingSystem.readAccount(recipientAccountId)
+
+      (senderAccountOpt, recipientAccountOpt) match {
+        case (Some(senderAccount), Some(recipientAccount)) =>
+          if (senderAccount.balance >= amount) {
+            // Update balances
+            val newSenderBalance = senderAccount.balance - amount
+            val newRecipientBalance = recipientAccount.balance + amount
+            BankingSystem.updateAccount(senderAccountId, senderAccount.copy(balance = newSenderBalance))
+            BankingSystem.updateAccount(recipientAccountId, recipientAccount.copy(balance = newRecipientBalance))
+            println(s"Successfully transferred $$amount to account $recipientAccountId.")
+          } else {
+            println("Insufficient funds.")
+          }
+        case _ =>
+          println(s"Invalid account IDs provided.")
+      }
+    } catch {
+      case _: NumberFormatException => println("Invalid amount. Please enter a numeric value.")
     }
   }
 
-  private def readAccount(): Unit = {
-    print("Enter account ID to read: ")
-    val accountId = StdIn.readInt()
+  // Check the balance of a specific account
+  def checkBalance(): Unit = {
+    print("Enter your account ID: ")
+    val accountId = try { StdIn.readInt() } catch { case _: Exception => -1 }
+    if (accountId == -1) {
+      println("Invalid account ID. Please enter a numeric value.")
+      return
+    }
+
     BankingSystem.readAccount(accountId) match {
-      case Some(account) => println(s"Account: $account")
-      case None => println(s"No account found with ID $accountId")
+      case Some(account) =>
+        println(s"Your current balance is: $$${account.balance}")
+      case None =>
+        println(s"No account found with ID $accountId.")
     }
-  }
-
-  private def updateUser(): Unit = {
-    print("Enter user ID to update: ")
-    val userId = StdIn.readInt()
-    print("Enter new name: ")
-    val name = StdIn.readLine()
-    print("Enter new email: ")
-    val email = StdIn.readLine()
-    val updatedCount = BankingSystem.updateUser(userId, User(Some(userId), name, email))
-    println(s"Updated $updatedCount user(s).")
-  }
-
-  private def listAllUsers(): Unit = {
-    val allUsers = BankingSystem.listAllUsers()
-    println(s"All Users: $allUsers")
-  }
-
-  private def listAllAccounts(): Unit = {
-    val allAccounts = BankingSystem.listAllAccounts()
-    println(s"All Accounts: $allAccounts")
-  }
-
-  private def deleteUser(): Unit = {
-    print("Enter user ID to delete: ")
-    val userId = StdIn.readInt()
-    val deletedCount = BankingSystem.deleteUser(userId)
-    println(s"Deleted $deletedCount user(s).")
-  }
-
-  private def deleteAccount(): Unit = {
-    print("Enter account ID to delete: ")
-    val accountId = StdIn.readInt()
-    val deletedCount = BankingSystem.deleteAccount(accountId)
-    println(s"Deleted $deletedCount account(s).")
   }
 }
